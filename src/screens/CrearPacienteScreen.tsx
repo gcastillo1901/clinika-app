@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,20 +15,8 @@ import { Picker } from "@react-native-picker/picker";
 import { supabase } from "../lib/supabase";
 import Toast from "react-native-toast-message";
 
-export default function CrearPacienteScreen({ navigation }: any) {
-  type FormPaciente = {
-    nombre: string;
-    apellido: string;
-    cedula: string;
-    fecha_nacimiento: string;
-    sexo: string;
-    telefono: string;
-    correo: string;
-    direccion: string;
-    nombre_contacto_emergencia: string;
-    telefono_contacto_emergencia: string;
-    observacion: string;
-  };
+export default function CrearPacienteScreen({ route, navigation }: any) {
+  const { paciente, modo } = route.params ?? {};
 
   const [form, setForm] = useState({
     nombre: "",
@@ -48,6 +36,29 @@ export default function CrearPacienteScreen({ navigation }: any) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [errores, setErrores] = useState<{ [key: string]: string }>({});
 
+  useEffect(() => {
+    if (modo === "editar" && paciente) {
+      setForm({
+        nombre: paciente.nombre ?? "",
+        apellido: paciente.apellido ?? "",
+        cedula: paciente.cedula ?? "",
+        fecha_nacimiento: paciente.fecha_nacimiento ?? "",
+        sexo: paciente.sexo ?? "",
+        telefono: paciente.telefono ?? "",
+        correo: paciente.correo ?? "",
+        direccion: paciente.direccion ?? "",
+        nombre_contacto_emergencia: paciente.nombre_contacto_emergencia ?? "",
+        telefono_contacto_emergencia:
+          paciente.telefono_contacto_emergencia ?? "",
+        observacion: paciente.observacion ?? "",
+      });
+
+      if (paciente.fecha_nacimiento) {
+        setSelectedDate(new Date(paciente.fecha_nacimiento));
+      }
+    }
+  }, [modo, paciente]);
+
   const handleChange = (key: string, value: string) => {
     setForm({ ...form, [key]: value });
   };
@@ -65,16 +76,14 @@ export default function CrearPacienteScreen({ navigation }: any) {
     const nuevosErrores: { [key: string]: string } = {};
 
     if (!form.nombre.trim()) nuevosErrores.nombre = "Este campo es obligatorio";
-    if (!form.apellido.trim())
-      nuevosErrores.apellido = "Este campo es obligatorio";
-    if (!form.fecha_nacimiento)
-      nuevosErrores.fecha_nacimiento = "Seleccione una fecha";
+    if (!form.apellido.trim()) nuevosErrores.apellido = "Este campo es obligatorio";
+    if (!form.fecha_nacimiento) nuevosErrores.fecha_nacimiento = "Seleccione una fecha";
     if (!form.sexo) nuevosErrores.sexo = "Seleccione el sexo";
     if (!form.telefono.trim()) nuevosErrores.telefono = "Ingrese el teléfono";
     if (!form.nombre_contacto_emergencia.trim())
-      nuevosErrores.contacto_nombre = "Requerido";
+      nuevosErrores.nombre_contacto_emergencia = "Requerido";
     if (!form.telefono_contacto_emergencia.trim())
-      nuevosErrores.contacto_telefono = "Requerido";
+      nuevosErrores.telefono_contacto_emergencia = "Requerido";
 
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
@@ -90,11 +99,26 @@ export default function CrearPacienteScreen({ navigation }: any) {
       return;
     }
 
-    const { error } = await supabase.from("pacientes").insert([form]);
+    let error;
+
+    if (modo === "editar" && paciente?.id) {
+      const result = await supabase
+        .from("pacientes")
+        .update(form)
+        .eq("id", paciente.id);
+      error = result.error;
+    } else {
+      const result = await supabase.from("pacientes").insert([form]);
+      error = result.error;
+    }
 
     if (error) {
       Alert.alert("Error", error.message);
     } else {
+      Toast.show({
+        type: "success",
+        text1: modo === "editar" ? "Paciente actualizado" : "Paciente agregado",
+      });
       navigation.navigate("Pacientes", { creado: true });
     }
   };
@@ -196,7 +220,7 @@ export default function CrearPacienteScreen({ navigation }: any) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Teléfono *</Text>
         <TextInput
-          style={[styles.input, errores.nombre && { borderColor: "red" }]}
+          style={[styles.input, errores.telefono && { borderColor: "red" }]}
           placeholder="+505 8888-9999"
           keyboardType="phone-pad"
           value={form.telefono}
@@ -232,7 +256,7 @@ export default function CrearPacienteScreen({ navigation }: any) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Nombre del Contacto</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, errores.nombre_contacto_emergencia && { borderColor: "red" }]}
           placeholder="Nombre completo"
           value={form.nombre_contacto_emergencia}
           onChangeText={(text) =>
@@ -244,7 +268,7 @@ export default function CrearPacienteScreen({ navigation }: any) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Teléfono de Emergencia</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, errores.telefono_contacto_emergencia && { borderColor: "red" }]}
           placeholder="+505 7777-8888"
           keyboardType="phone-pad"
           value={form.telefono_contacto_emergencia}
@@ -267,7 +291,10 @@ export default function CrearPacienteScreen({ navigation }: any) {
       </View>
 
       <View style={{ marginTop: 30 }}>
-        <Button title="Guardar Paciente" onPress={handleSubmit} />
+        <Button
+          title={modo === "editar" ? "Actualizar Paciente" : "Guardar Paciente"}
+          onPress={handleSubmit}
+        />
       </View>
     </ScrollView>
   );

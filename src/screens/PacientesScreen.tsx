@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from "react";
+import React, { useState, useLayoutEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,24 +13,85 @@ import Icon from "react-native-vector-icons/Ionicons";
 import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 
-export default function PacientesScreen({ navigation }: any) {
+// --- COMPONENTES EXTERNOS AL PRINCIPAL ---
+
+interface PacienteCardProps {
+  readonly paciente: any;
+  readonly calcularEdad: (fechaNacimiento: string) => number;
+  readonly onPress: () => void;
+}
+
+const PacienteCard: React.FC<PacienteCardProps> = ({ paciente, calcularEdad, onPress }) => (
+  <TouchableOpacity onPress={onPress} style={styles.card}>
+    <Text style={styles.nombre}>
+      {paciente.nombre} {paciente.apellido}
+    </Text>
+    <View style={styles.infoRow}>
+      <Icon name="person-outline" size={16} color="#555" />
+      <Text style={styles.infoTexto}>
+        {calcularEdad(paciente.fecha_nacimiento)} años · {paciente.sexo}
+      </Text>
+    </View>
+    <View style={styles.infoRow}>
+      <Icon name="card-outline" size={16} color="#555" />
+      <Text style={styles.infoTexto}>{paciente.cedula ?? "N/A"}</Text>
+    </View>
+    <View style={styles.infoRow}>
+      <Icon name="call-outline" size={16} color="#555" />
+      <Text style={styles.infoTexto}>{paciente.telefono}</Text>
+    </View>
+    <View style={styles.infoRow}>
+      <Icon name="mail-outline" size={16} color="#555" />
+      <Text style={styles.infoTexto}>{paciente.correo}</Text>
+    </View>
+    <View style={styles.infoRow}>
+      <Icon name="calendar-outline" size={16} color="#555" />
+      <Text style={styles.infoTexto}>
+        Última visita: {paciente.ultima_visita ?? "Sin registro"}
+      </Text>
+    </View>
+  </TouchableOpacity>
+);
+
+
+interface NuevoPacienteButtonProps {
+  readonly onPress: () => void;
+}
+
+const NuevoPacienteButton: React.FC<NuevoPacienteButtonProps> = ({ onPress }) => (
+  <TouchableOpacity onPress={onPress} style={styles.botonNuevo}>
+    <Icon name="add" size={18} color="#fff" />
+    <Text style={styles.textoBoton}>Nuevo</Text>
+  </TouchableOpacity>
+);
+
+// --- COMPONENTE HEADER DERECHO FUERA DEL COMPONENTE PRINCIPAL ---
+const HeaderRightNuevoPaciente: React.FC<{ onPress: () => void }> = React.memo(({ onPress }) => (
+  <NuevoPacienteButton onPress={onPress} />
+));
+
+// --- FUNCIÓN PARA HEADER DERECHO (fuera del componente principal) ---
+function renderHeaderRightNuevoPaciente(onPress: () => void) {
+  return () => <HeaderRightNuevoPaciente onPress={onPress} />;
+}
+
+// --- COMPONENTE PRINCIPAL ---
+
+export default function PacientesScreen({ navigation }: { readonly navigation: any }) {
   const [pacientes, setPacientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const handleNuevoPaciente = useCallback(
+    () => navigation.navigate("NuevoPaciente"),
+    [navigation]
+  );
+
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate("NuevoPaciente")}
-          style={styles.botonNuevo}
-        >
-          <Icon name="add" size={18} color="#fff" />
-          <Text style={styles.textoBoton}>Nuevo</Text>
-        </TouchableOpacity>
-      ),
+      headerRight: renderHeaderRightNuevoPaciente(handleNuevoPaciente),
     });
-  }, [navigation]);
+  }, [navigation, handleNuevoPaciente]);
 
   const fetchPacientes = async () => {
     setLoading(true);
@@ -46,24 +107,24 @@ export default function PacientesScreen({ navigation }: any) {
   };
 
   useFocusEffect(
-  React.useCallback(() => {
-    fetchPacientes();
+    useCallback(() => {
+      fetchPacientes();
 
-    const wasCreated = navigation.getState().routes.find(
-  (r: { name: string; params?: { creado?: boolean } }) => r.name === 'Pacientes'
-)?.params?.creado;
+      const wasCreated = navigation.getState().routes.find(
+        (r: { name: string; params?: { creado?: boolean } }) => r.name === 'Pacientes'
+      )?.params?.creado;
 
-    if (wasCreated) {
-      Toast.show({
-        type: 'success',
-        text1: 'Paciente agregado',
-        text2: 'El paciente se ha agregado correctamente.',
-      });
+      if (wasCreated) {
+        Toast.show({
+          type: 'success',
+          text1: 'Paciente agregado',
+          text2: 'El paciente se ha agregado correctamente.',
+        });
 
-      navigation.setParams({ creado: undefined });
-    }
-  }, [navigation])
-);
+        navigation.setParams({ creado: undefined });
+      }
+    }, [navigation])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -83,36 +144,13 @@ export default function PacientesScreen({ navigation }: any) {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      <Text style={styles.nombre}>
-        {item.nombre} {item.apellido}
-      </Text>
-      <View style={styles.infoRow}>
-        <Icon name="person-outline" size={16} color="#555" />
-        <Text style={styles.infoTexto}>
-          {calcularEdad(item.fecha_nacimiento)} años · {item.sexo}
-        </Text>
-      </View>
-      <View style={styles.infoRow}>
-        <Icon name="card-outline" size={16} color="#555" />
-        <Text style={styles.infoTexto}>{item.cedula ?? "N/A"}</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <Icon name="call-outline" size={16} color="#555" />
-        <Text style={styles.infoTexto}>{item.telefono}</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <Icon name="mail-outline" size={16} color="#555" />
-        <Text style={styles.infoTexto}>{item.correo}</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <Icon name="calendar-outline" size={16} color="#555" />
-        <Text style={styles.infoTexto}>
-          Última visita: {item.ultima_visita ?? "Sin registro"}
-        </Text>
-      </View>
-    </View>
-  );
+  <PacienteCard
+    paciente={item}
+    calcularEdad={calcularEdad}
+    onPress={() => navigation.navigate("DetallePaciente", { paciente: item })}
+  />
+);
+
 
   if (loading) {
     return (
