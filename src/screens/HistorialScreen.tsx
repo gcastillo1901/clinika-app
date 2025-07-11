@@ -4,11 +4,10 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
 import { supabase } from "../lib/supabase";
-import Icon from "react-native-vector-icons/Ionicons";
+
 
 export default function HistorialScreen({ route, navigation }: any) {
   const { paciente } = route.params;
@@ -47,16 +46,6 @@ export default function HistorialScreen({ route, navigation }: any) {
       <Text style={styles.tituloPrincipal}>
         Historial de {paciente.nombre} {paciente.apellido}
       </Text>
-
-      <TouchableOpacity
-        style={styles.boton}
-        onPress={() =>
-          navigation.navigate("NuevoHistorial", { paciente })
-        }
-      >
-        <Icon name="add-circle-outline" size={20} color="#fff" />
-        <Text style={styles.botonTexto}>Agregar Registro</Text>
-      </TouchableOpacity>
 
       {loading ? (
         <ActivityIndicator size="large" color="#007aff" />

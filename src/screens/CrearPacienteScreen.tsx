@@ -153,7 +153,6 @@ export default function CrearPacienteScreen({ route, navigation }: any) {
         <TextInput
           style={styles.input}
           placeholder="001-123456-0000X"
-          keyboardType="numeric"
           value={form.cedula}
           onChangeText={(text) => handleChange("cedula", text)}
         />

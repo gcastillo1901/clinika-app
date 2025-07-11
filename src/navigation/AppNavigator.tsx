@@ -7,6 +7,7 @@ import CrearPacienteScreen from '../screens/CrearPacienteScreen';
 import DetallePacienteScreen from "../screens/DetallePacienteScreen";
 import HistorialScreen from '../screens/HistorialScreen';
 import NuevoHistorialScreen from '../screens/NuevoHistorialScreen';
+import AgendarCitaScreen from "../screens/AgendarCitaScreen";
 
 
 const Stack = createNativeStackNavigator();
@@ -20,6 +21,7 @@ export default function AppNavigator() {
         <Stack.Screen name="DetallePaciente" component={DetallePacienteScreen} options={{ title: "Detalle del Paciente" }} />
         <Stack.Screen name="Historial" component={HistorialScreen} />
         <Stack.Screen name="NuevoHistorial" component={NuevoHistorialScreen} />
+        <Stack.Screen name="AgendarCita" component={AgendarCitaScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

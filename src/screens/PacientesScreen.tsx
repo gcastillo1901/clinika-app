@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 import Icon from "react-native-vector-icons/Ionicons";
 import Toast from 'react-native-toast-message';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/types";
 
 // --- COMPONENTES EXTERNOS AL PRINCIPAL ---
 
@@ -21,8 +24,12 @@ interface PacienteCardProps {
   readonly onPress: () => void;
 }
 
-const PacienteCard: React.FC<PacienteCardProps> = ({ paciente, calcularEdad, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={styles.card}>
+const PacienteCard: React.FC<PacienteCardProps> = ({ paciente, calcularEdad, onPress }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  
+  return (
+  <View style={styles.card}>
     <Text style={styles.nombre}>
       {paciente.nombre} {paciente.apellido}
     </Text>
@@ -50,8 +57,28 @@ const PacienteCard: React.FC<PacienteCardProps> = ({ paciente, calcularEdad, onP
         Última visita: {paciente.ultima_visita ?? "Sin registro"}
       </Text>
     </View>
-  </TouchableOpacity>
+
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10 }}>
+      <TouchableOpacity
+        style={[styles.botonMini, { backgroundColor: "#007aff" }]}
+        onPress={() =>
+          navigation.navigate("DetallePaciente", { paciente })
+        }
+      >
+        <Text style={styles.textoMini}>Ver Detalle</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.botonMini, { backgroundColor: "#28a745" }]}
+        onPress={() =>
+          navigation.navigate("AgendarCita", { paciente })
+        }
+      >
+        <Text style={styles.textoMini}>Agendar Cita</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
 );
+};
 
 
 interface NuevoPacienteButtonProps {
@@ -81,6 +108,20 @@ export default function PacientesScreen({ navigation }: { readonly navigation: a
   const [pacientes, setPacientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filtro, setFiltro] = useState("");
+
+  const normalizarTexto = (texto: string) =>
+    texto
+      ?.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\s+/g, "");
+
+  const pacientesFiltrados = pacientes.filter((p) =>
+    [p.nombre, p.apellido, p.telefono, p.cedula].some((campo) =>
+      normalizarTexto(campo).includes(normalizarTexto(filtro))
+    )
+  );
 
   const handleNuevoPaciente = useCallback(
     () => navigation.navigate("NuevoPaciente"),
@@ -161,18 +202,32 @@ export default function PacientesScreen({ navigation }: { readonly navigation: a
   }
 
   return (
-    <FlatList
-      data={pacientes}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={renderItem}
-      contentContainerStyle={styles.lista}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-      ListEmptyComponent={
-        <Text style={styles.vacio}>No hay pacientes registrados.</Text>
-      }
-    />
+    <View style={{ flex: 1 }}>
+      {/* 🔍 Input de búsqueda */}
+      <View style={styles.searchContainer}>
+        <Icon name="search" size={20} color="#888" style={{ marginHorizontal: 8 }} />
+        <TextInput
+          placeholder="Buscar por nombre, cédula o teléfono..."
+          placeholderTextColor="#888"
+          style={styles.searchInput}
+          value={filtro}
+          onChangeText={setFiltro}
+        />
+      </View>
+
+      <FlatList
+        data={pacientesFiltrados}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderItem}
+        contentContainerStyle={styles.lista}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={
+          <Text style={styles.vacio}>No hay pacientes registrados.</Text>
+        }
+      />
+    </View>
   );
 }
 
@@ -227,4 +282,34 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontWeight: "600",
   },
+    botonMini: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  textoMini: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  searchContainer: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#f1f1f1",
+  marginHorizontal: 16,
+  marginTop: 12,
+  marginBottom: 8,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 12,
+  borderColor: "#ddd",
+  borderWidth: 1,
+},
+searchInput: {
+  flex: 1,
+  fontSize: 16,
+  color: "#333",
+  backgroundColor: "white",
+},
+
 });
